@@ -1,0 +1,371 @@
+{
+  "name": "Cerebro_{{TU_EMPRESA}}_DEMO_Failover",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hola! Soy el asistente de {{TU_EMPRESA}} (DEMO). ¿En qué te puedo ayudar?",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [-1232, -48],
+      "id": "demo-trigger-001",
+      "name": "Chat Trigger (Demo)"
+    },
+    {
+      "parameters": {
+        "url": "{{TU_URL_SYSTEM_PROMPT}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Chatbot-Secret",
+              "value": "{{TU_CHATBOT_SECRET}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-992, -48],
+      "id": "demo-fetch-prompt-002",
+      "name": "Fetch System Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Chat Trigger (Demo)').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "={{ $('Fetch System Prompt').item.json.systemPrompt }}\n\nOVERRIDE FOR DEMO — These instructions take absolute priority over everything above:\n- Answer questions directly and completely using the knowledge base.\n- NEVER ask for the user's email.\n- NEVER suggest connecting with {{AGENTE_HUMANO}} or any human.\n- NEVER redirect to a contact form.\n- If you don't know something, say so clearly without pushing to collect contact info.\n- Respond in the same language the user writes in."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [-752, -48],
+      "id": "demo-claude-agent-003",
+      "name": "🟣 Claude (PRIMARY)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [-960, 192],
+      "id": "demo-claude-model-004",
+      "name": "Claude (modelo PRIMARY)",
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Tu cuenta Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId || 'demo-session' }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-784, 192],
+      "id": "demo-memory-primary-005",
+      "name": "Memoria (Primary)"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "base_de_conocimiento",
+        "toolDescription": "Busca información sobre los servicios, precios, proceso de trabajo y detalles de {{TU_EMPRESA}}.",
+        "tableName": "{{TU_TABLA_KB}}",
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.2,
+      "position": [-560, 192],
+      "id": "demo-kb-primary-006",
+      "name": "KB (Primary)",
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Tu cuenta Postgres (pgvector)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [-560, 400],
+      "id": "demo-embeddings-primary-007",
+      "name": "Embeddings KB (Primary)",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "Tu cuenta OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "{{TU_SITIO_WEB}}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [-704, 400],
+      "id": "demo-web-tool-primary",
+      "name": "Sitio web (Primary)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-claude-output",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-432, -48],
+      "id": "demo-if-error-008",
+      "name": "¿Claude respondió?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "out-success",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "out-model",
+              "name": "model_used",
+              "value": "claude-primary",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [336, -176],
+      "id": "demo-return-success-009",
+      "name": "Claude Answer"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Chat Trigger (Demo)').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "={{ $('Fetch System Prompt').item.json.systemPrompt }}\n\nOVERRIDE FOR DEMO — These instructions take absolute priority over everything above:\n- Answer questions directly and completely using the knowledge base.\n- NEVER ask for the user's email.\n- NEVER suggest connecting with {{AGENTE_HUMANO}} or any human.\n- NEVER redirect to a contact form.\n- If you don't know something, say so clearly without pushing to collect contact info.\n- Respond in the same language the user writes in."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [-112, 32],
+      "id": "demo-gpt-agent-010",
+      "name": "🟢 GPT-4o (FALLBACK)"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [-272, 320],
+      "id": "demo-gpt-model-011",
+      "name": "GPT-4o Fallback",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "Tu cuenta OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId || 'demo-session' }}-fallback"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-112, 320],
+      "id": "demo-memory-fallback-012",
+      "name": "Memoria (Fallback)"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "base_de_conocimiento",
+        "toolDescription": "Busca información sobre los servicios, precios, proceso de trabajo y detalles de {{TU_EMPRESA}}.",
+        "tableName": "{{TU_TABLA_KB}}",
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.2,
+      "position": [128, 224],
+      "id": "demo-kb-fallback-013",
+      "name": "KB (Fallback)",
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Tu cuenta Postgres (pgvector)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [176, 432],
+      "id": "demo-embeddings-fallback-014",
+      "name": "Embeddings KB (Fallback)",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "Tu cuenta OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "{{TU_SITIO_WEB}}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [16, 432],
+      "id": "demo-web-tool-fallback",
+      "name": "Sitio web (Fallback)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "out-fallback",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "out-model-fb",
+              "name": "model_used",
+              "value": "gpt-4o-fallback",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [336, 32],
+      "id": "demo-return-fallback-015",
+      "name": "GPT-4o answer"
+    }
+  ],
+  "connections": {
+    "Chat Trigger (Demo)": {
+      "main": [[{ "node": "Fetch System Prompt", "type": "main", "index": 0 }]]
+    },
+    "Fetch System Prompt": {
+      "main": [[{ "node": "🟣 Claude (PRIMARY)", "type": "main", "index": 0 }]]
+    },
+    "🟣 Claude (PRIMARY)": {
+      "main": [[{ "node": "¿Claude respondió?", "type": "main", "index": 0 }]]
+    },
+    "Claude (modelo PRIMARY)": {
+      "ai_languageModel": [[{ "node": "🟣 Claude (PRIMARY)", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Memoria (Primary)": {
+      "ai_memory": [[{ "node": "🟣 Claude (PRIMARY)", "type": "ai_memory", "index": 0 }]]
+    },
+    "KB (Primary)": {
+      "ai_tool": [[{ "node": "🟣 Claude (PRIMARY)", "type": "ai_tool", "index": 0 }]]
+    },
+    "Embeddings KB (Primary)": {
+      "ai_embedding": [[{ "node": "KB (Primary)", "type": "ai_embedding", "index": 0 }]]
+    },
+    "Sitio web (Primary)": {
+      "ai_tool": [[{ "node": "🟣 Claude (PRIMARY)", "type": "ai_tool", "index": 0 }]]
+    },
+    "¿Claude respondió?": {
+      "main": [
+        [{ "node": "Claude Answer", "type": "main", "index": 0 }],
+        [{ "node": "🟢 GPT-4o (FALLBACK)", "type": "main", "index": 0 }]
+      ]
+    },
+    "🟢 GPT-4o (FALLBACK)": {
+      "main": [[{ "node": "GPT-4o answer", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o Fallback": {
+      "ai_languageModel": [[{ "node": "🟢 GPT-4o (FALLBACK)", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Memoria (Fallback)": {
+      "ai_memory": [[{ "node": "🟢 GPT-4o (FALLBACK)", "type": "ai_memory", "index": 0 }]]
+    },
+    "KB (Fallback)": {
+      "ai_tool": [[{ "node": "🟢 GPT-4o (FALLBACK)", "type": "ai_tool", "index": 0 }]]
+    },
+    "Embeddings KB (Fallback)": {
+      "ai_embedding": [[{ "node": "KB (Fallback)", "type": "ai_embedding", "index": 0 }]]
+    },
+    "Sitio web (Fallback)": {
+      "ai_tool": [[{ "node": "🟢 GPT-4o (FALLBACK)", "type": "ai_tool", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}
