@@ -1,8 +1,8 @@
 # n8n AI Failover — Claude → GPT-4o
 
-Automatic failover workflow for n8n chatbots.
-If Claude fails (outage, suspended model, API error),
-GPT-4o takes over instantly. The user never notices.
+Automatic failover workflow for n8n chatbots. If your primary AI model fails — outage, suspended model, API error — a backup model takes over instantly. The user never notices.
+
+This template uses Claude as primary and GPT-4o as fallback, but the same pattern works with any two AI models supported by n8n (Gemini, Mistral, Cohere, local Ollama models, etc.).
 
 Built by [lumyantech](https://lumyantech.com) — AI automation and infrastructure for businesses that can't afford downtime.
 
