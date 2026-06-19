@@ -31,6 +31,38 @@ Built by [lumyantech](https://lumyantech.com) — AI automation and infrastructu
 
 ---
 
+## Quick setup (recommended)
+
+Instead of replacing placeholders one by one, run this in your terminal:
+
+**Linux / macOS:**
+```bash
+sed -i \
+  -e 's/{{TU_EMPRESA}}/My Company/g' \
+  -e 's/{{TU_URL_SYSTEM_PROMPT}}/https:\/\/mysite.com\/api\/chatbot-config/g' \
+  -e 's/{{TU_CHATBOT_SECRET}}/my-secret-here/g' \
+  -e 's/{{TU_SITIO_WEB}}/https:\/\/mysite.com/g' \
+  -e 's/{{TU_TABLA_KB}}/my_kb_table/g' \
+  -e 's/{{AGENTE_HUMANO}}/John/g' \
+  Cerebro_DEMO_Failover_TEMPLATE.json
+```
+
+**Windows (PowerShell):**
+```powershell
+(Get-Content Cerebro_DEMO_Failover_TEMPLATE.json) `
+  -replace '{{TU_EMPRESA}}', 'My Company' `
+  -replace '{{TU_URL_SYSTEM_PROMPT}}', 'https://mysite.com/api/chatbot-config' `
+  -replace '{{TU_CHATBOT_SECRET}}', 'my-secret-here' `
+  -replace '{{TU_SITIO_WEB}}', 'https://mysite.com' `
+  -replace '{{TU_TABLA_KB}}', 'my_kb_table' `
+  -replace '{{AGENTE_HUMANO}}', 'John' |
+  Set-Content Cerebro_DEMO_Failover_TEMPLATE.json
+```
+
+Then import the modified file into n8n.
+
+---
+
 ## Credentials to assign in n8n after import
 
 - **Anthropic API key** → node `Claude (modelo PRIMARY)`
