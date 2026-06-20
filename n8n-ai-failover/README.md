@@ -95,7 +95,7 @@ Then import the modified file into n8n.
 ## Video walkthrough
 
 - Part 1: [My Chatbot Kept Talking When the AI Model Died](https://youtu.be/VCLbtwbyoKQ)
-- Part 2: The Exact n8n Failover Setup ← *coming soon, link after publish*
+- Part 2: [The Exact n8n Failover Setup] (https://youtu.be/xFMZF8Jlmw0)
 
 ---
 
